@@ -134,3 +134,43 @@ def test_fallback_when_model_never_submits(ctx):
     ctx.llm = Silent([], {})
     out = triage(ticket(ctx, "TKT-128253"), ctx)
     assert validate(out) == [] and out["needs_clarification"] and out["priority"] == "P3"
+
+
+def test_tool_call_written_as_text_is_executed(ctx):
+    class TextCaller(ScriptedLLM):
+        def chat_tools(self, messages, tools, system=None, max_tokens=0, temperature=0.0):
+            self.calls += 1
+            if self.calls == 1:
+                return {"text": '{"name": "search_kb", "parameters": {"query": "delegate approvals"}}', "tool_calls": []}
+            return {"text": 'Submitting: {"name": "submit_triage", "parameters": ' + __import__("json").dumps(
+                base_decision(kb_references=["KB-4449"])) + "}", "tool_calls": []}
+    ctx.llm = TextCaller([], {})
+    out = triage(ticket(ctx, "TKT-158764"), ctx)
+    actions = [s["action"] for s in out["reasoning_trace"]]
+    assert "search_kb" in actions and "fallback_decision" not in actions
+    assert (out["category"], out["priority"]) == ("how_to", "P4") and "KB-4449" in out["kb_references"]
+
+
+def test_stalling_model_is_offered_submit_only(ctx):
+    class Announcer(ScriptedLLM):
+        def chat_tools(self, messages, tools, system=None, max_tokens=0, temperature=0.0):
+            self.calls += 1
+            if len(tools) == 1:  # only submit_triage offered -> it complies
+                return {"text": "", "tool_calls": [{"id": "s", "name": "submit_triage", "args": base_decision()}]}
+            return {"text": "I will call submit_triage.", "tool_calls": []}
+    ctx.llm = Announcer([], {})
+    out = triage(ticket(ctx, "TKT-158764"), ctx)
+    assert "fallback_decision" not in [s["action"] for s in out["reasoning_trace"]]
+
+
+def test_data_exposure_forced_to_security_even_if_model_fails(ctx):
+    class Silent(ScriptedLLM):
+        def chat_tools(self, *a, **k):
+            return {"text": "hmm", "tool_calls": []}
+    ctx.llm = Silent([], {})
+    out = triage(ticket(ctx, "TKT-135081"), ctx)
+    assert (out["category"], out["priority"], out["route_to"], out["escalate"]) == ("security", "P1", "security", True)
+    ctx.llm = ScriptedLLM([], base_decision(category="needs_info", base_priority="P4"))
+    out = triage(ticket(ctx, "TKT-135081"), ctx)
+    assert (out["category"], out["priority"], out["route_to"]) == ("security", "P1", "security")
+    assert not out["needs_clarification"]

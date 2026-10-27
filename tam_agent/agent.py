@@ -18,7 +18,7 @@ import os
 
 from .llm import LLMClient
 from .policy import apply_policy
-from .tools import INJECTION, SUBMIT_SPEC, TOOL_SPECS, Toolbox, error_codes_in, normalize_module, summarize
+from .tools import EXPOSURE, INJECTION, SUBMIT_SPEC, TOOL_SPECS, Toolbox, error_codes_in, normalize_module, summarize
 
 MAX_TOOL_CALLS = int(os.getenv("MAX_TOOL_CALLS", "12"))
 MAX_TURNS = MAX_TOOL_CALLS + 4
@@ -70,6 +70,7 @@ def _preparse(ticket: dict) -> dict:
         "error_codes_found": error_codes_in(ticket.get("error_code", ""), text),
         "account_id_blank": not ticket.get("account_id"),
         "possible_prompt_injection": bool(INJECTION.search(text)),
+        "possible_data_exposure": bool(EXPOSURE.search(text)),
     }
 
 
@@ -96,6 +97,7 @@ class _Run:
         self.trace.append({"step": len(self.trace) + 1, "action": action,
                            "input": inp if isinstance(inp, str) else json.dumps(inp, default=str),
                            "observation": observation})
+        print(f"   step {len(self.trace)}: {action}", flush=True)
 
     def execute(self, name: str, args: dict) -> dict:
         key = name + json.dumps(args, sort_keys=True)
@@ -137,6 +139,11 @@ def triage(ticket: dict, ctx: Context) -> dict:
     if tb.current_ticket["_account"]:
         run.facts["account_id"] = tb.current_ticket["_account"]  # domain is authoritative (data/README.md)
     run.log("parse_ticket", f"ticket_id={ticket['ticket_id']}", summarize(pre))
+    if pre["possible_data_exposure"]:
+        run.facts["data_exposure"] = True
+        run.log("flag_data_exposure", "description",
+                "Ticket describes a user seeing data they should not (KB-6401 scope); security handling required "
+                "regardless of the customer's tone or stated priority.")
     if pre["possible_prompt_injection"]:
         run.log("flag_untrusted_instructions", "description",
                 "Ticket text contains instructions addressed to automated systems; treated as customer content "
@@ -148,7 +155,7 @@ def triage(ticket: dict, ctx: Context) -> dict:
     for _turn in range(MAX_TURNS):
         budget_left = MAX_TOOL_CALLS - run.tool_calls
         tools = TOOL_SPECS + [SUBMIT_SPEC] if budget_left > 0 else [SUBMIT_SPEC]
-        if budget_left <= 0:
+        if budget_left <= 0 and messages[-1]["role"] != "user":
             messages.append({"role": "user", "content": "Tool budget exhausted. Call submit_triage now."})
         try:
             resp = ctx.llm.chat_tools(messages, tools, system=SYSTEM, max_tokens=1800)
@@ -157,13 +164,21 @@ def triage(ticket: dict, ctx: Context) -> dict:
             break
         if resp["text"].strip():
             run.log("think", "", resp["text"].strip()[:400])
-        calls = resp["tool_calls"]
+        calls = resp["tool_calls"] or _calls_from_text(resp["text"])
+        if calls and not resp["tool_calls"]:
+            run.log("parse_text_tool_call", "", f"model wrote the tool call as text; parsed {[c['name'] for c in calls]}")
         if not calls:
             nudges += 1
-            if nudges > 2:
+            if nudges > 3:
                 break
             messages.append({"role": "assistant", "content": resp["text"] or "(thinking)"})
-            messages.append({"role": "user", "content": "Use a tool, or call submit_triage if you have enough evidence."})
+            if nudges >= 2:  # small models often announce a call instead of making it: offer only submit
+                tools_note = ("Do not describe the call. Invoke the submit_triage tool now with your decision "
+                              "based on the evidence gathered so far.")
+                messages.append({"role": "user", "content": tools_note})
+                run.tool_calls = max(run.tool_calls, MAX_TOOL_CALLS)  # next turn exposes only submit_triage
+            else:
+                messages.append({"role": "user", "content": "Use a tool, or call submit_triage if you have enough evidence."})
             continue
         messages.append({"role": "assistant", "content": resp["text"], "tool_calls": calls})
         for c in calls:
@@ -215,7 +230,41 @@ def triage(ticket: dict, ctx: Context) -> dict:
     }
 
 
+def _calls_from_text(text: str) -> list[dict]:
+    """Recover tool calls that a model wrote as JSON text, e.g. {"name": "search_kb", "parameters": {...}}."""
+    names = {t["name"] for t in TOOL_SPECS} | {SUBMIT_SPEC["name"]}
+    dec, out, i = json.JSONDecoder(), [], 0
+    while (i := text.find("{", i)) != -1:
+        try:
+            obj, end = dec.raw_decode(text, i)
+        except json.JSONDecodeError:
+            i += 1
+            continue
+        if isinstance(obj, dict) and obj.get("name") in names:
+            args = obj.get("parameters", obj.get("arguments", {}))
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    args = {}
+            out.append({"id": f"text_{len(out)}", "name": obj["name"], "args": args if isinstance(args, dict) else {}})
+        i = end
+    return out
+
+
 def _fallback(ticket: dict, pre: dict, run: _Run) -> dict:
+    if run.facts.get("data_exposure"):
+        return {"account_id": run.facts.get("account_id"), "category": "security", "base_priority": "P1",
+                "route_to": "security", "escalate": True, "notify_tam": False, "duplicate_of": None,
+                "needs_clarification": False, "kb_references": ["KB-6401", "KB-2914"],
+                "account_signals": [], "confidence": 0.5,
+                "customer_reply": "Thank you for reporting this. We treat any report of data being visible to the "
+                                  "wrong party as a security matter, and our Security team is now engaged. If the "
+                                  "affected sourcing event is still running, please pause it until Security confirms "
+                                  "containment. We will update you as soon as we have more information.",
+                "internal_note": "Possible cross-supplier data exposure (KB-6401). Do not reproduce in the customer "
+                                 "tenant. Automated triage fell back to the security rule; please review.",
+                "rationale": "fallback: data-exposure rule"}
     return {"account_id": run.facts.get("account_id") or ticket.get("account_id") or None,
             "category": "needs_info", "base_priority": "P3", "route_to": "L1_support", "escalate": False,
             "notify_tam": False, "duplicate_of": None, "needs_clarification": True, "kb_references": [],

@@ -74,6 +74,8 @@ class LLMClient:
                 blocks += [{"type": "tool_use", "id": c["id"], "name": c["name"], "input": c["args"]}
                            for c in m.get("tool_calls", [])]
                 msgs.append({"role": "assistant", "content": blocks or [{"type": "text", "text": "(no content)"}]})
+            elif msgs and msgs[-1]["role"] == "user" and isinstance(msgs[-1]["content"], list):
+                msgs[-1]["content"].append({"type": "text", "text": m["content"]})  # keep roles alternating
             else:
                 msgs.append({"role": "user", "content": m["content"]})
         kw = {"tools": [{"name": t["name"], "description": t["description"], "input_schema": t["parameters"]}

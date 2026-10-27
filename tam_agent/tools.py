@@ -39,6 +39,12 @@ ERROR_CODE = re.compile(r"\bE-\d{4}\b")
 INJECTION = re.compile(r"(system note|note to (the )?ai|ai (triage )?assistant|ignore (all |any )?(previous|prior)"
                        r"|classify this ticket as|set (this|the) (ticket )?(to|as) p[1-4]|include the full list"
                        r"|you are now|disregard)", re.I)
+# KB-6401 scope: someone can see data they should not (bids, prices, invoices, bank details, other tenants)
+EXPOSURE = re.compile(r"((could|can|able to|were able to) (see|view|access|download)\b[^.]{0,80}\b(bids?|bid amounts|"
+                      r"prices|pricing|invoices?|contracts?|bank details|personal data|competitor|competing|"
+                      r"another (supplier|tenant|customer|company)|other (suppliers?|tenants?|customers?|compan(y|ies))))"
+                      r"|data (leak|exposure)|(another|other) (tenant|customer|supplier)'?s? (data|bids?|invoices?|prices)",
+                      re.I)
 OPEN_STATES = {"open", "pending_customer"}
 
 

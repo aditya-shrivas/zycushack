@@ -63,6 +63,9 @@ def apply_policy(d: dict, facts: dict, toolbox) -> tuple[dict, list[str]]:
         fix("category", "needs_info" if out["needs_clarification"] else "bug", "no original ticket identified")
 
     # --- security / data exposure (KB-2914, KB-6401)
+    if facts.get("data_exposure") and out["category"] != "security":
+        fix("category", "security", "KB-6401: report of data visible to the wrong party")
+        fix("needs_clarification", False, "security reports are acted on immediately")
     if out["category"] == "security" or out["route_to"] == "security":
         fix("category", "security", "security report")
         fix("route_to", "security", "KB-2914: security never goes to L1")

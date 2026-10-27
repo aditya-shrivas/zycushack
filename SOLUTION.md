@@ -17,6 +17,7 @@ ticket ─► pre-parse (module alias, error codes in text, injection markers)
   - `check_active_incidents`.
 
   The tools do the arithmetic (days to renewal, 3-month % change), so the model doesn't compute it. History tools only see tickets created *before* the ticket being triaged, which prevents leakage from the future.
+- **Small-model robustness.** Local models sometimes write a tool call as JSON text, or announce "I will call submit_triage" without calling it. The loop parses tool calls written as text. On a stall it offers only `submit_triage`. A data-exposure detector (KB-6401 scope) flags security tickets in code, so they are handled correctly even if the model fails.
 - **Stopping.** The model stops when it calls `submit_triage`. Repeated identical calls return a cached result with a "repeated call" note. When the budget runs out, only `submit_triage` is offered. If the model still doesn't submit, a conservative `needs_info` fallback is produced (confidence 0.2, flagged for a human).
 - **Guardrails** (`policy.py`). The model proposes a `base_priority`. Code then applies the hard rules:
   - Risk override: +1 level, capped at P2, plus notify the TAM and escalate.
