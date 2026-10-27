@@ -11,6 +11,15 @@ from .schema import CATEGORIES, PRIORITIES, ROUTES
 
 POLICY_KB, DUPLICATE_KB, EXPOSURE_KB = "KB-2914", "KB-5930", "KB-6401"
 
+# KB-6401: acknowledge, Security engaged, no speculation on cause/scope, pause affected sourcing events
+SECURITY_REPLY = ("Thank you for reporting this. We treat any report of information being visible to the wrong "
+                  "party as a security matter, and our Security team is now engaged. If the affected sourcing event "
+                  "is still running, please pause it until Security confirms containment. We will update you as "
+                  "soon as we have more information.")
+SECURITY_NOTE = ("Possible cross-supplier/tenant data exposure (KB-6401): P1, routed to Security, escalated. "
+                 "Do not attempt to reproduce in the customer tenant and do not speculate on cause or scope "
+                 "with the customer.")
+
 
 def bump(priority: str) -> str:
     """Raise one level, but the override never goes above P2 (P1 stays P1)."""
@@ -66,6 +75,11 @@ def apply_policy(d: dict, facts: dict, toolbox) -> tuple[dict, list[str]]:
     if facts.get("data_exposure") and out["category"] != "security":
         fix("category", "security", "KB-6401: report of data visible to the wrong party")
         fix("needs_clarification", False, "security reports are acted on immediately")
+        # the model's reply/note were written for a different category: replace them with KB-6401 handling
+        notes.append("customer_reply, internal_note, kb_references replaced with KB-6401 security handling")
+        out["customer_reply"] = SECURITY_REPLY
+        out["internal_note"] = SECURITY_NOTE + f" (Model had proposed {d.get('category')!r}; overridden by policy.)"
+        out["kb_references"] = [EXPOSURE_KB, POLICY_KB]
     if out["category"] == "security" or out["route_to"] == "security":
         fix("category", "security", "security report")
         fix("route_to", "security", "KB-2914: security never goes to L1")

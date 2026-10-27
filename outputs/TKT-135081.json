@@ -1,0 +1,57 @@
+{
+  "ticket_id": "TKT-135081",
+  "account_id": "ACC-7533",
+  "category": "security",
+  "priority": "P1",
+  "route_to": "security",
+  "escalate": true,
+  "notify_tam": false,
+  "duplicate_of": null,
+  "needs_clarification": false,
+  "kb_references": [
+    "KB-6401",
+    "KB-2914"
+  ],
+  "account_signals": [],
+  "customer_reply": "Thank you for reporting this. We treat any report of information being visible to the wrong party as a security matter, and our Security team is now engaged. If the affected sourcing event is still running, please pause it until Security confirms containment. We will update you as soon as we have more information.",
+  "internal_note": "Possible cross-supplier/tenant data exposure (KB-6401): P1, routed to Security, escalated. Do not attempt to reproduce in the customer tenant and do not speculate on cause or scope with the customer. Automated triage fell back to the security rule; please review.",
+  "confidence": 0.5,
+  "reasoning_trace": [
+    {
+      "step": 1,
+      "action": "parse_ticket",
+      "input": "ticket_id=TKT-135081",
+      "observation": "{\"module_raw\": \"Sourcing\", \"module_normalized\": \"Sourcing\", \"error_codes_found\": [], \"account_id_blank\": false, \"possible_prompt_injection\": false, \"possible_data_exposure\": true}"
+    },
+    {
+      "step": 2,
+      "action": "flag_data_exposure",
+      "input": "description",
+      "observation": "Ticket describes a user seeing data they should not (KB-6401 scope); security handling required regardless of the customer's tone or stated priority."
+    },
+    {
+      "step": 3,
+      "action": "llm_error",
+      "input": "ollama",
+      "observation": "URLError(ConnectionRefusedError(10061, 'No connection could be made because the target machine actively refused it', None, 10061, None))"
+    },
+    {
+      "step": 4,
+      "action": "fallback_decision",
+      "input": "agent did not submit",
+      "observation": "Conservative needs_info triage; human review required."
+    },
+    {
+      "step": 5,
+      "action": "guardrail:evaluate_account_risk",
+      "input": "ACC-7533",
+      "observation": "{\"account_id\": \"ACC-7533\", \"override_applies\": false, \"within_90_days_of_renewal\": false, \"days_to_renewal\": 308, \"active_users_change_3m_pct\": -1.9, \"usage_decline_gt_25pct\": false, \"open_escalations\": 0, \"two_or_more_escalations\": false, \"rule\": \"KB-2914: renewal<=90d AND (users -25%/3m OR >=2 ..."
+    },
+    {
+      "step": 6,
+      "action": "policy_guardrails",
+      "input": "KB-2914/KB-5930/KB-6401",
+      "observation": "decision consistent with policy, no changes"
+    }
+  ]
+}

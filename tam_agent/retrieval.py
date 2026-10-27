@@ -82,8 +82,12 @@ class KBRetriever:
         ranked = []
         for aid, s in scores.items():
             meta = self.articles[aid]["meta"]
-            if doc_type and meta.get("type") != doc_type:
+            # doc_type is a hard filter only for policy; otherwise a boost, because models often guess the
+            # wrong type (e.g. "troubleshooting" for a by-design "limit" article)
+            if doc_type == "policy" and meta.get("type") != "policy":
                 continue
+            if doc_type and meta.get("type") == doc_type:
+                s *= 1.3
             if module and meta.get("module") in (module, "All"):
                 s *= 1.25
             if meta.get("status") == "deprecated":

@@ -1,0 +1,50 @@
+{
+  "ticket_id": "TKT-128253",
+  "account_id": "ACC-3737",
+  "category": "needs_info",
+  "priority": "P3",
+  "route_to": "L1_support",
+  "escalate": false,
+  "notify_tam": false,
+  "duplicate_of": null,
+  "needs_clarification": true,
+  "kb_references": [
+    "KB-2914"
+  ],
+  "account_signals": [],
+  "customer_reply": "Thank you for contacting support. To help us investigate, please share the module affected, the exact error text, how many users are affected and when it started.",
+  "internal_note": "Automated triage could not complete; please review manually.",
+  "confidence": 0.2,
+  "reasoning_trace": [
+    {
+      "step": 1,
+      "action": "parse_ticket",
+      "input": "ticket_id=TKT-128253",
+      "observation": "{\"module_raw\": null, \"module_normalized\": null, \"error_codes_found\": [], \"account_id_blank\": false, \"possible_prompt_injection\": false, \"possible_data_exposure\": false}"
+    },
+    {
+      "step": 2,
+      "action": "llm_error",
+      "input": "ollama",
+      "observation": "URLError(ConnectionRefusedError(10061, 'No connection could be made because the target machine actively refused it', None, 10061, None))"
+    },
+    {
+      "step": 3,
+      "action": "fallback_decision",
+      "input": "agent did not submit",
+      "observation": "Conservative needs_info triage; human review required."
+    },
+    {
+      "step": 4,
+      "action": "guardrail:evaluate_account_risk",
+      "input": "ACC-3737",
+      "observation": "{\"account_id\": \"ACC-3737\", \"override_applies\": false, \"within_90_days_of_renewal\": false, \"days_to_renewal\": 300, \"active_users_change_3m_pct\": 0.9, \"usage_decline_gt_25pct\": false, \"open_escalations\": 0, \"two_or_more_escalations\": false, \"rule\": \"KB-2914: renewal<=90d AND (users -25%/3m OR >=2 e..."
+    },
+    {
+      "step": 5,
+      "action": "policy_guardrails",
+      "input": "KB-2914/KB-5930/KB-6401",
+      "observation": "decision consistent with policy, no changes"
+    }
+  ]
+}

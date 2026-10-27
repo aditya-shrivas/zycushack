@@ -174,3 +174,13 @@ def test_data_exposure_forced_to_security_even_if_model_fails(ctx):
     out = triage(ticket(ctx, "TKT-135081"), ctx)
     assert (out["category"], out["priority"], out["route_to"]) == ("security", "P1", "security")
     assert not out["needs_clarification"]
+
+
+def test_security_override_replaces_contradicting_reply(ctx):
+    ctx.llm = ScriptedLLM([], base_decision(category="how_to", base_priority="P4", kb_references=["KB-8093"],
+                                            customer_reply="Please follow KB-8093 to clear the cache.",
+                                            internal_note="Not a data exposure issue."))
+    out = triage(ticket(ctx, "TKT-135081"), ctx)
+    assert "KB-8093" not in out["customer_reply"] and "Security team" in out["customer_reply"]
+    assert "pause" in out["customer_reply"] and out["kb_references"] == ["KB-6401", "KB-2914"]
+    assert "Not a data exposure" not in out["internal_note"]

@@ -1,0 +1,12 @@
+{"ticket_id": "TKT-135081", "status": "ok", "errors": [], "seconds": 377.08, "llm_calls": 9, "input_tokens": 22521, "output_tokens": 1427, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-160067", "status": "ok", "errors": [], "seconds": 336.54, "llm_calls": 8, "input_tokens": 19303, "output_tokens": 1164, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-144939", "status": "ok", "errors": [], "seconds": 12.14, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-119877", "status": "ok", "errors": [], "seconds": 12.11, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-160477", "status": "ok", "errors": [], "seconds": 12.13, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-192732", "status": "ok", "errors": [], "seconds": 12.11, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-169327", "status": "ok", "errors": [], "seconds": 12.13, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-160067", "status": "ok", "errors": [], "seconds": 12.12, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-160094", "status": "ok", "errors": [], "seconds": 12.09, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-128253", "status": "ok", "errors": [], "seconds": 12.17, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-135081", "status": "ok", "errors": [], "seconds": 12.06, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
+{"ticket_id": "TKT-158764", "status": "ok", "errors": [], "seconds": 12.11, "llm_calls": 1, "input_tokens": 0, "output_tokens": 0, "provider": "ollama/qwen2.5:7b"}
